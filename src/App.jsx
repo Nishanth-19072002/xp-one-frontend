@@ -3,6 +3,8 @@ import FollowupsDashboard, { initialEnquiries } from './modules/crm/followups';
 import ConfirmedOrders from './modules/crm/orders';
 import SiteServicesDashboard from './modules/site-services';
 import EcommerceDashboard from './modules/ecommerce';
+import InstallationTechSupport from './modules/installation-tech-support';
+import ToolsModule from './modules/tools';
 import { Menu, X, Users, PenTool, Wrench, ShoppingCart, Settings } from 'lucide-react';
 
 function App() {
@@ -126,7 +128,15 @@ function App() {
           {activeModule === 'site-services' && <SiteServicesDashboard enquiries={enquiries} setEnquiries={setEnquiries} />}
           {activeModule === 'ecom-purchase' && <EcommerceDashboard enquiries={enquiries} setEnquiries={setEnquiries} />}
           
-          {!activeModule.startsWith('crm-') && activeModule !== 'site-services' && activeModule !== 'ecom-purchase' && (
+          {activeModule.startsWith('tech-') && (
+            <InstallationTechSupport activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId)} enquiries={enquiries} />
+          )}
+
+          {activeModule.startsWith('tools-') && (
+            <ToolsModule activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId)} />
+          )}
+
+          {!activeModule.startsWith('crm-') && activeModule !== 'site-services' && activeModule !== 'ecom-purchase' && !activeModule.startsWith('tech-') && !activeModule.startsWith('tools-') && (
             <div className="page-container">
               <h2 className="page-title">Module Under Construction</h2>
               <p style={{ color: 'var(--text-muted)' }}>This section is currently being built.</p>
