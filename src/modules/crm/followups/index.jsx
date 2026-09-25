@@ -23,9 +23,39 @@ export const initialEnquiries = [
     address: '123 Business Park, Silicon Valley, CA',
     phone: '+1 (555) 123-4567',
     remarks: 'Looking for 5 new dealership licenses',
-    status: 'PENDING',
+    status: 'CONFIRMED',
+    confirmedQuoteId: 'q1',
+    ocNumber: 'STP/OC/26-27/001',
+    siteData: {
+      dcNumber: 'DC/STP/26-27/045',
+      serviceInterval: '30',
+      lastServiced: '2026-09-01',
+      serviceReports: [
+        { id: 1, date: '2026-09-01', technician: 'Rahul S.', workDone: 'Routine maintenance, replaced filters.' }
+      ],
+      waterReports: [
+        { id: 1, date: '2026-09-01', ph: '7.2', tds: '150', hardness: '45', attachment: 'report_sep.pdf' }
+      ],
+      complaints: [
+        { id: 'TKT-8291', date: '2026-09-20', issue: 'Pressure drop in the main line.', status: 'OPEN' }
+      ]
+    },
     quotes: [
-      { id: 'q1', title: 'RO Plant Setup (Initial)', quoteNo: 'XAS/26-27/1001', amount: 154000, date: '2026-09-24' }
+      { 
+        id: 'q1', 
+        title: 'RO Plant Setup (Initial)', 
+        quoteNo: 'XAS/26-27/1001', 
+        amount: 162840, 
+        date: '2026-09-24',
+        items: [
+          { id: 'p1', description: 'RO Plant 1000 LPH Fully Automatic', hsn: '84212190', basePrice: 120000, margin: 15, gstRate: 18, qty: 1 }
+        ],
+        toDetails: {
+          customerName: 'TechCorp Solutions', contactPerson: 'Sarah Jenkins', phone: '+1 (555) 123-4567', address: '123 Business Park, Silicon Valley, CA', gst: '', pan: '', state: 'Karnataka'
+        },
+        terms: "1. Validity: 30 Days\n2. Payment: 100% Advance\n3. Delivery: 1-2 weeks from PO\n4. Warranty: 1 Year against manufacturing defects.",
+        selectedBankId: 1
+      }
     ],
     followups: [
       { id: 102, date: '2026-09-28', enteredDate: '2026-09-23', remarks: 'Call back to finalize the quote and send contract.' },
@@ -47,8 +77,49 @@ export const initialEnquiries = [
   }
 ];
 
-// --- QUOTE MODAL COMPONENT ---
-function QuoteModal({ isOpen, onClose, enquiry, onSaveQuote, initialData }) {
+export function FollowupModal({ isOpen, onClose, onAddFollowup }) {
+  const [newFollowup, setNewFollowup] = useState({ remarks: '', nextDate: '' });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onAddFollowup(newFollowup);
+    setNewFollowup({ remarks: '', nextDate: '' });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">Add Follow-up</h2>
+          <button type="button" className="close-btn" onClick={onClose}><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            <div className="form-group">
+              <label className="form-label">Follow-up Discussion / Remarks</label>
+              <textarea required className="form-control" rows="3" placeholder="What was discussed or needs to be done?" 
+                value={newFollowup.remarks} onChange={e => setNewFollowup({...newFollowup, remarks: e.target.value})}></textarea>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Next Follow-up Date</label>
+              <input required type="date" className="form-control" 
+                value={newFollowup.nextDate} onChange={e => setNewFollowup({...newFollowup, nextDate: e.target.value})} />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Save Follow-up</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN DASHBOARD COMPONENT ---
+export function QuoteModal({ isOpen, onClose, enquiry, onSaveQuote, initialData }) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [quoteNo, setQuoteNo] = useState(initialData?.quoteNo || `XAS/26-27/${Math.floor(1000 + Math.random() * 9000)}`);
   
@@ -453,7 +524,7 @@ function QuoteModal({ isOpen, onClose, enquiry, onSaveQuote, initialData }) {
   );
 }
 
-// --- MAIN DASHBOARD COMPONENT ---
+// --- QUOTE MODAL COMPONENT ---
 export default function FollowupsDashboard({ enquiries, setEnquiries }) {
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState(null);
@@ -825,34 +896,19 @@ export default function FollowupsDashboard({ enquiries, setEnquiries }) {
       )}
 
       {/* ADD FOLLOWUP MODAL */}
-      {isFollowupModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsFollowupModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Add Follow-up</h2>
-              <button className="close-btn" onClick={() => setIsFollowupModalOpen(false)}><X size={20} /></button>
-            </div>
-            <form onSubmit={handleAddFollowup}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">What needs to be done?</label>
-                  <textarea required className="form-control" placeholder="Action required..." 
-                    value={newFollowup.remarks} onChange={e => setNewFollowup({...newFollowup, remarks: e.target.value})}></textarea>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Next Follow-up Date</label>
-                  <input required type="date" className="form-control" 
-                    value={newFollowup.nextDate} onChange={e => setNewFollowup({...newFollowup, nextDate: e.target.value})} />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsFollowupModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <FollowupModal 
+        isOpen={isFollowupModalOpen} 
+        onClose={() => setIsFollowupModalOpen(false)}
+        onAddFollowup={(followup) => {
+          const today = new Date().toISOString().split('T')[0];
+          const newFw = { id: Date.now(), date: followup.nextDate, enteredDate: today, remarks: followup.remarks };
+          setEnquiries(enquiries.map(enq => {
+            if (enq.id === activeEnquiryId) return { ...enq, followups: [newFw, ...enq.followups] };
+            return enq;
+          }));
+          setIsFollowupModalOpen(false);
+        }}
+      />
 
       {/* ADVANCED QUOTE MODAL */}
       <QuoteModal 

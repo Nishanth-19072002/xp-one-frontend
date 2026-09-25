@@ -1,20 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FollowupsDashboard, { initialEnquiries } from './modules/crm/followups';
 import ConfirmedOrders from './modules/crm/orders';
+import SiteServicesDashboard from './modules/site-services';
+import EcommerceDashboard from './modules/ecommerce';
 import { Menu, X, Users, PenTool, Wrench, ShoppingCart, Settings } from 'lucide-react';
 
 function App() {
   const [activeModule, setActiveModule] = useState('crm-followups');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [enquiries, setEnquiries] = useState(initialEnquiries);
+  const [enquiries, setEnquiries] = useState(() => {
+    const saved = localStorage.getItem('crm_enquiries_v4');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { return initialEnquiries; }
+    }
+    return initialEnquiries;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('crm_enquiries_v4', JSON.stringify(enquiries));
+  }, [enquiries]);
 
   const navigation = [
     {
       title: 'CRM',
       icon: <Users size={16} />,
       items: [
-        { id: 'crm-followups', label: 'Followups' },
-        { id: 'crm-quotes', label: 'Quotes' },
+        { id: 'crm-followups', label: 'Enquiries' },
         { id: 'crm-orders', label: 'Confirmed Orders' }
       ]
     },
@@ -22,10 +33,7 @@ function App() {
       title: 'Site Service',
       icon: <Settings size={16} />,
       items: [
-        { id: 'service-scheduled', label: 'Scheduled Service' },
-        { id: 'service-water', label: 'Water Reports' },
-        { id: 'service-reports', label: 'Service Reports' },
-        { id: 'service-complaints', label: 'Complaint Box' }
+        { id: 'site-services', label: 'Service Dashboard' }
       ]
     },
     {
@@ -114,10 +122,11 @@ function App() {
 
         <main className="page-wrapper" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-base)' }}>
           {activeModule === 'crm-followups' && <FollowupsDashboard enquiries={enquiries} setEnquiries={setEnquiries} />}
-          {activeModule === 'crm-quotes' && <div className="page-container"><h2 className="page-title">Quotes Dashboard</h2><p>Here you will see all created quotes. You can easily create a new quote directly from an Enquiry in the Followups tab!</p></div>}
-          {activeModule === 'crm-orders' && <ConfirmedOrders enquiries={enquiries} />}
+          {activeModule === 'crm-orders' && <ConfirmedOrders enquiries={enquiries} setEnquiries={setEnquiries} />}
+          {activeModule === 'site-services' && <SiteServicesDashboard enquiries={enquiries} setEnquiries={setEnquiries} />}
+          {activeModule === 'ecom-purchase' && <EcommerceDashboard enquiries={enquiries} setEnquiries={setEnquiries} />}
           
-          {!activeModule.startsWith('crm-') && (
+          {!activeModule.startsWith('crm-') && activeModule !== 'site-services' && activeModule !== 'ecom-purchase' && (
             <div className="page-container">
               <h2 className="page-title">Module Under Construction</h2>
               <p style={{ color: 'var(--text-muted)' }}>This section is currently being built.</p>

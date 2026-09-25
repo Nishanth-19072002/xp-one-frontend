@@ -265,7 +265,7 @@ body {
   background: var(--bg-surface);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: var(--shadow-card);
 }
 
@@ -624,4 +624,15 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   
   .quote-action-row { flex-direction: column; align-items: stretch !important; }
   .quote-bank-row { grid-template-columns: 1fr !important; }
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
