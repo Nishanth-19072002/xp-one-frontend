@@ -65,8 +65,14 @@ export const initialVideos = [
   }
 ];
 
-export default function MachineVideosDashboard() {
-  const [videos, setVideos] = useState(initialVideos);
+export default function MachineVideosDashboard({ 
+  videos: propVideos, 
+  setVideos: propSetVideos, 
+  onOpenRequestCall 
+}) {
+  const [localVideos, setLocalVideos] = useState(initialVideos);
+  const videos = propVideos !== undefined ? propVideos : localVideos;
+  const setVideos = propSetVideos !== undefined ? propSetVideos : setLocalVideos;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 

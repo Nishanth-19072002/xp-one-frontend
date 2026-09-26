@@ -9,6 +9,43 @@ export default function InstallationTechSupport({ activeTab = 'tech-manuals', on
   const [currentTab, setCurrentTab] = useState(activeTab || 'tech-manuals');
   const [prefillModel, setPrefillModel] = useState('');
 
+  // Live state with localStorage persistence
+  const [requests, setRequests] = useState(() => {
+    const saved = localStorage.getItem('dms_tech_call_requests');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return initialCallRequests;
+  });
+
+  const [manuals, setManuals] = useState(() => {
+    const saved = localStorage.getItem('dms_tech_manuals');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return initialManuals;
+  });
+
+  const [videos, setVideos] = useState(() => {
+    const saved = localStorage.getItem('dms_tech_videos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return initialVideos;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dms_tech_call_requests', JSON.stringify(requests));
+  }, [requests]);
+
+  useEffect(() => {
+    localStorage.setItem('dms_tech_manuals', JSON.stringify(manuals));
+  }, [manuals]);
+
+  useEffect(() => {
+    localStorage.setItem('dms_tech_videos', JSON.stringify(videos));
+  }, [videos]);
+
   // Keep in sync when parent activeModule changes (e.g. sidebar navigation)
   useEffect(() => {
     if (activeTab && (activeTab === 'tech-manuals' || activeTab === 'tech-videos' || activeTab === 'tech-call')) {
@@ -28,24 +65,24 @@ export default function InstallationTechSupport({ activeTab = 'tech-manuals', on
     handleTabClick('tech-call');
   };
 
+  const pendingCallCount = requests.filter(r => r.status === 'Pending').length;
+
   const tabs = [
     {
       id: 'tech-manuals',
       label: 'User Manuals',
-      icon: <BookOpen size={16} />,
-      count: initialManuals.length
+      icon: <BookOpen size={16} />
     },
     {
       id: 'tech-videos',
       label: 'Machine Videos',
-      icon: <Video size={16} />,
-      count: initialVideos.length
+      icon: <Video size={16} />
     },
     {
       id: 'tech-call',
       label: 'Request for Call',
       icon: <PhoneCall size={16} />,
-      count: initialCallRequests.filter(r => r.status === 'Pending').length,
+      count: pendingCallCount > 0 ? pendingCallCount : null,
       badgeColor: '#B45309'
     }
   ];
@@ -77,7 +114,7 @@ export default function InstallationTechSupport({ activeTab = 'tech-manuals', on
             >
               {tab.icon}
               <span>{tab.label}</span>
-              {tab.count !== undefined && (
+              {Boolean(tab.count) && (
                 <span 
                   className="module-tab-count"
                   style={tab.badgeColor && !isActive ? { color: tab.badgeColor, background: '#FEF3C7' } : {}}
@@ -93,15 +130,28 @@ export default function InstallationTechSupport({ activeTab = 'tech-manuals', on
       {/* Tab Panels */}
       <div>
         {currentTab === 'tech-manuals' && (
-          <UserManualDashboard onOpenRequestCall={handleOpenRequestCall} />
+          <UserManualDashboard 
+            manuals={manuals} 
+            setManuals={setManuals} 
+            onOpenRequestCall={handleOpenRequestCall} 
+          />
         )}
 
         {currentTab === 'tech-videos' && (
-          <MachineVideosDashboard onOpenRequestCall={handleOpenRequestCall} />
+          <MachineVideosDashboard 
+            videos={videos} 
+            setVideos={setVideos} 
+            onOpenRequestCall={handleOpenRequestCall} 
+          />
         )}
 
         {currentTab === 'tech-call' && (
-          <ReqForCallDashboard prefillModel={prefillModel} enquiries={enquiries} />
+          <ReqForCallDashboard 
+            prefillModel={prefillModel} 
+            enquiries={enquiries} 
+            requests={requests} 
+            setRequests={setRequests} 
+          />
         )}
       </div>
     </div>

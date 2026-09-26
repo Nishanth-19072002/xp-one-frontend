@@ -48,8 +48,14 @@ export const initialManuals = [
   }
 ];
 
-export default function UserManualDashboard() {
-  const [manuals, setManuals] = useState(initialManuals);
+export default function UserManualDashboard({ 
+  manuals: propManuals, 
+  setManuals: propSetManuals, 
+  onOpenRequestCall 
+}) {
+  const [localManuals, setLocalManuals] = useState(initialManuals);
+  const manuals = propManuals !== undefined ? propManuals : localManuals;
+  const setManuals = propSetManuals !== undefined ? propSetManuals : setLocalManuals;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 

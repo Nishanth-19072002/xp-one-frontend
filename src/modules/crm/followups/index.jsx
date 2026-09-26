@@ -31,7 +31,22 @@ export const initialEnquiries = [
       serviceInterval: '30',
       lastServiced: '2026-09-01',
       serviceReports: [
-        { id: 1, date: '2026-09-01', technician: 'Rahul S.', workDone: 'Routine maintenance, replaced filters.' }
+        { 
+          id: 1, 
+          reportCode: 'SR-2026-081',
+          date: '2026-09-01', 
+          technician: 'Rahul Sharma', 
+          zone: 'South Zone',
+          remarks: 'Completed routine machine maintenance. Checked raw water pump pressure (3.5 bar), replaced 5-micron sediment cartridges, and flushed RO membranes.',
+          workDone: 'Completed routine machine maintenance. Checked raw water pump pressure (3.5 bar), replaced 5-micron sediment cartridges, and flushed RO membranes.',
+          servicePersonName: 'Rahul Sharma',
+          status: 'AWAITING_CLIENT_SIGN',
+          uploadedAt: '01 Sep 2026, 11:30 AM',
+          attachments: [
+            { name: 'ro_filter_replacement.png', size: '142.5 KB', type: 'IMAGE', dataUrl: '' },
+            { name: 'pressure_gauge_log.pdf', size: '85.2 KB', type: 'DOC', dataUrl: '' }
+          ]
+        }
       ],
       waterReports: [
         { id: 1, date: '2026-09-01', ph: '7.2', tds: '150', hardness: '45', attachment: 'report_sep.pdf' }

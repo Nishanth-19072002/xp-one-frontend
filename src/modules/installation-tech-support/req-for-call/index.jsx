@@ -44,8 +44,14 @@ export const initialCallRequests = [
   }
 ];
 
-export default function ReqForCallDashboard({ enquiries = [] }) {
-  const [requests, setRequests] = useState(initialCallRequests);
+export default function ReqForCallDashboard({ 
+  enquiries = [], 
+  requests: propRequests, 
+  setRequests: propSetRequests 
+}) {
+  const [localRequests, setLocalRequests] = useState(initialCallRequests);
+  const requests = propRequests !== undefined ? propRequests : localRequests;
+  const setRequests = propSetRequests !== undefined ? propSetRequests : setLocalRequests;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -216,7 +222,7 @@ export default function ReqForCallDashboard({ enquiries = [] }) {
   const resolvedCount = requests.filter(r => r.status === 'Resolved').length;
 
   return (
-    <div>
+    <div style={{ maxWidth: '1100px' }}>
       {/* Toast Notification */}
       {successToast && (
         <div style={{
@@ -242,33 +248,33 @@ export default function ReqForCallDashboard({ enquiries = [] }) {
       )}
 
       {/* Top Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.15rem', boxShadow: 'var(--shadow-card)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Requests</div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.25rem' }}>{totalCount}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '1.25rem' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.9rem 1.1rem', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Requests</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.15rem' }}>{totalCount}</div>
         </div>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.15rem', boxShadow: 'var(--shadow-card)', borderLeft: '4px solid #F59E0B' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pending Calls</div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#B45309', marginTop: '0.25rem' }}>{pendingCount}</div>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.9rem 1.1rem', boxShadow: 'var(--shadow-card)', borderLeft: '4px solid #F59E0B' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pending Calls</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#B45309', marginTop: '0.15rem' }}>{pendingCount}</div>
         </div>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.15rem', boxShadow: 'var(--shadow-card)', borderLeft: '4px solid #10B981' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Resolved</div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#047857', marginTop: '0.25rem' }}>{resolvedCount}</div>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.9rem 1.1rem', boxShadow: 'var(--shadow-card)', borderLeft: '4px solid #10B981' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Resolved</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#047857', marginTop: '0.15rem' }}>{resolvedCount}</div>
         </div>
       </div>
 
       {/* Search & Actions Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: 1 }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: '280px' }}>
+            <Search size={15} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Search by customer, ID, or phone..."
+              placeholder="Search request, customer, phone..."
               className="form-control search-box"
-              style={{ paddingLeft: '2.4rem', borderRadius: '999px', fontSize: '0.85rem' }}
+              style={{ paddingLeft: '2.4rem', borderRadius: '999px', fontSize: '0.82rem' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -281,6 +287,7 @@ export default function ReqForCallDashboard({ enquiries = [] }) {
                 key={st}
                 className={`filter-chip ${statusFilter === st ? 'active' : ''}`}
                 onClick={() => setStatusFilter(st)}
+                style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
               >
                 {st}
               </button>
@@ -288,8 +295,8 @@ export default function ReqForCallDashboard({ enquiries = [] }) {
           </div>
         </div>
 
-        <button className="btn btn-primary" onClick={handleOpenCreate}>
-          <PlusCircle size={16} /> Request a Call
+        <button className="btn btn-primary btn-small" onClick={handleOpenCreate}>
+          <PlusCircle size={15} /> Request a Call
         </button>
       </div>
 
@@ -298,126 +305,128 @@ export default function ReqForCallDashboard({ enquiries = [] }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th style={{ width: '100px' }}>Request ID</th>
-              <th>Customer / Dealer</th>
-              <th>Contact Name</th>
-              <th>Contact Number</th>
-              <th>Query</th>
-              <th>Created Date</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'right', minWidth: '220px' }}>Actions</th>
+              <th style={{ width: '85px', padding: '0.75rem 1rem' }}>Req ID</th>
+              <th style={{ minWidth: '180px', padding: '0.75rem 1rem' }}>Customer & Contact</th>
+              <th style={{ minWidth: '220px', maxWidth: '320px', padding: '0.75rem 1rem' }}>Query</th>
+              <th style={{ width: '140px', padding: '0.75rem 1rem' }}>Status & Date</th>
+              <th style={{ textAlign: 'right', width: '180px', padding: '0.75rem 1rem' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredRequests.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
-                  <PhoneCall size={38} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4 }} />
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>No Call Requests Found</div>
-                  <div style={{ fontSize: '0.85rem' }}>Click "Request a Call" above to submit a new callback inquiry.</div>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <PhoneCall size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.4 }} />
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', fontSize: '0.9rem' }}>No Call Requests Found</div>
+                  <div style={{ fontSize: '0.8rem' }}>Click "Request a Call" above to submit a new callback inquiry.</div>
                 </td>
               </tr>
             ) : (
               filteredRequests.map((req) => (
                 <tr key={req.id} className="table-row">
                   {/* Request ID */}
-                  <td style={{ fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.88rem' }}>
+                  <td style={{ fontWeight: 700, color: 'var(--accent-color)', fontSize: '0.85rem', whiteSpace: 'nowrap', padding: '0.75rem 1rem' }}>
                     #{req.id}
                   </td>
 
-                  {/* Customer / Dealer */}
-                  <td>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Building2 size={14} style={{ color: 'var(--text-muted)' }} />
-                      {req.customerName}
+                  {/* Customer & Contact */}
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}>
+                      <Building2 size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      <span>{req.customerName}</span>
                     </div>
-                  </td>
-
-                  {/* Contact Name */}
-                  <td>
-                    <div style={{ fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <User size={13} style={{ color: 'var(--text-muted)' }} />
-                      {req.contactName}
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span>{req.contactName}</span>
+                      <span>•</span>
+                      <a 
+                        href={`tel:${req.contactNumber.replace(/[^0-9+]/g, '')}`} 
+                        style={{ color: 'var(--accent-color)', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                        title="Click to dial"
+                      >
+                        <Phone size={11} /> {req.contactNumber}
+                      </a>
                     </div>
-                  </td>
-
-                  {/* Contact Number */}
-                  <td>
-                    <a 
-                      href={`tel:${req.contactNumber.replace(/[^0-9+]/g, '')}`} 
-                      style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                      title="Click to dial"
-                    >
-                      <Phone size={12} />
-                      {req.contactNumber}
-                    </a>
                   </td>
 
                   {/* Query */}
-                  <td style={{ maxWidth: '280px' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  <td style={{ maxWidth: '320px', padding: '0.75rem 1rem' }}>
+                    <div 
+                      style={{ 
+                        fontSize: '0.82rem', 
+                        color: 'var(--text-secondary)', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.4
+                      }}
+                      title={req.query}
+                    >
                       {req.query}
                     </div>
                   </td>
 
-                  {/* Created Date */}
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {req.createdAt}
-                  </td>
-
-                  {/* Status */}
-                  <td>
-                    {req.status === 'Pending' ? (
-                      <span className="badge-status-pending">
-                        <Clock size={12} /> Pending
-                      </span>
-                    ) : (
-                      <span className="badge-status-resolved">
-                        <CheckCircle2 size={12} /> Resolved
-                      </span>
-                    )}
+                  {/* Status & Date */}
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    <div>
+                      {req.status === 'Pending' ? (
+                        <span className="badge-status-pending" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                          <Clock size={11} /> Pending
+                        </span>
+                      ) : (
+                        <span className="badge-status-resolved" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                          <CheckCircle2 size={11} /> Resolved
+                        </span>
+                      )}
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', whiteSpace: 'nowrap' }}>
+                        {req.createdAt}
+                      </div>
+                    </div>
                   </td>
 
                   {/* Clean Actions: Call, Edit & Status Toggle */}
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '0.75rem 1rem' }}>
+                    <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                       {/* Direct Call Button */}
                       <a 
                         href={`tel:${req.contactNumber.replace(/[^0-9+]/g, '')}`} 
                         className="btn btn-primary btn-small"
-                        style={{ textDecoration: 'none', background: '#3B82F6', border: 'none', color: '#FFFFFF' }}
+                        style={{ textDecoration: 'none', background: '#3B82F6', border: 'none', color: '#FFFFFF', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                         title={`Call ${req.contactName} (${req.contactNumber})`}
                       >
-                        <Phone size={13} /> Call
+                        <Phone size={12} /> Call
                       </a>
 
                       {/* Edit Button */}
                       <button 
+                        type="button"
                         className="btn btn-secondary btn-small"
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                         onClick={() => handleOpenEdit(req)}
                         title="Edit details"
                       >
-                        <Edit2 size={13} /> Edit
+                        <Edit2 size={12} /> Edit
                       </button>
 
                       {/* Status Toggle Action */}
                       {req.status === 'Pending' ? (
                         <button 
+                          type="button"
                           className="btn btn-small"
-                          style={{ background: 'var(--success)', color: '#FFFFFF', border: 'none' }}
+                          style={{ background: 'var(--success)', color: '#FFFFFF', border: 'none', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
                           onClick={() => toggleStatus(req.id, 'Pending')}
                           title="Mark call as resolved"
                         >
-                          <Check size={13} /> Resolve
+                          <Check size={12} /> Resolve
                         </button>
                       ) : (
                         <button 
+                          type="button"
                           className="btn btn-secondary btn-small"
-                          style={{ fontSize: '0.75rem', opacity: 0.8 }}
+                          style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem', opacity: 0.85 }}
                           onClick={() => toggleStatus(req.id, 'Resolved')}
                           title="Reopen as pending"
                         >
-                          <RotateCcw size={12} /> Reopen
+                          <RotateCcw size={11} /> Reopen
                         </button>
                       )}
                     </div>
