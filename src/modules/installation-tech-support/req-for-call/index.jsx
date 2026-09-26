@@ -8,10 +8,13 @@ import {
   Phone, 
   X, 
   User, 
-  Building2, 
   Edit2,
   Check,
-  RotateCcw
+  RotateCcw,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  ExternalLink
 } from 'lucide-react';
 
 export const initialCallRequests = [
@@ -21,6 +24,9 @@ export const initialCallRequests = [
     contactName: 'Sarah Jenkins',
     contactNumber: '+1 (555) 123-4567',
     query: 'Need guidance regarding 1000 LPH RO machine installation and electrical wiring.',
+    attachments: [
+      { name: 'panel_wiring_diagram.png', type: 'IMAGE', size: '240 KB' }
+    ],
     status: 'Pending',
     createdAt: '25 Sep 2026, 11:30 AM'
   },
@@ -30,6 +36,10 @@ export const initialCallRequests = [
     contactName: 'Mike Ross',
     contactNumber: '+1 (555) 987-6543',
     query: 'Water softener multiport valve regeneration query - hardness reading is high after recharge.',
+    attachments: [
+      { name: 'valve_pressure_gauge.jpg', type: 'IMAGE', size: '1.2 MB' },
+      { name: 'water_test_report.pdf', type: 'FILE', size: '450 KB' }
+    ],
     status: 'Pending',
     createdAt: '25 Sep 2026, 09:15 AM'
   },
@@ -39,6 +49,7 @@ export const initialCallRequests = [
     contactName: 'Kishore Kumar',
     contactNumber: '+91 98451 22340',
     query: 'Requesting clarification on daily maintenance log sheet and membrane replacement interval.',
+    attachments: [],
     status: 'Resolved',
     createdAt: '24 Sep 2026, 03:45 PM'
   }
@@ -65,20 +76,21 @@ export default function ReqForCallDashboard({
   // Modals & Feedback
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [selectedViewAttachments, setSelectedViewAttachments] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
 
-  // Form State: only Date and Query
+  // Form State: Query and Attachments only (Date is auto-fetched for today)
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    query: ''
+    query: '',
+    attachments: []
   });
 
   // Open Create Modal
   const handleOpenCreate = () => {
     setEditingId(null);
     setFormData({
-      date: new Date().toISOString().split('T')[0],
-      query: ''
+      query: '',
+      attachments: []
     });
     setIsModalOpen(true);
   };
@@ -87,10 +99,43 @@ export default function ReqForCallDashboard({
   const handleOpenEdit = (req) => {
     setEditingId(req.id);
     setFormData({
-      date: req.date || new Date().toISOString().split('T')[0],
-      query: req.query || ''
+      query: req.query || '',
+      attachments: req.attachments ? [...req.attachments] : []
     });
     setIsModalOpen(true);
+  };
+
+  // Handle File Upload
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    files.forEach(file => {
+      const isImg = file.type.startsWith('image/');
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const newAttachment = {
+          name: file.name,
+          size: file.size ? `${(file.size / 1024).toFixed(0)} KB` : 'Unknown size',
+          type: isImg ? 'IMAGE' : 'FILE',
+          dataUrl: uploadEvent.target.result
+        };
+        setFormData(prev => ({
+          ...prev,
+          attachments: [...(prev.attachments || []), newAttachment]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  // Remove Attachment
+  const handleRemoveAttachment = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index)
+    }));
   };
 
   // Submit Handler (Create or Edit)
@@ -99,7 +144,8 @@ export default function ReqForCallDashboard({
 
     if (!formData.query.trim()) return;
 
-    const formattedDate = new Date(formData.date || new Date()).toLocaleDateString('en-GB', { 
+    const todayDate = new Date();
+    const formattedDate = todayDate.toLocaleDateString('en-GB', { 
       day: '2-digit', 
       month: 'short', 
       year: 'numeric' 
@@ -109,15 +155,14 @@ export default function ReqForCallDashboard({
       // Update existing record
       setRequests(requests.map(r => r.id === editingId ? {
         ...r,
-        date: formData.date,
-        createdAt: formattedDate,
-        query: formData.query.trim()
+        query: formData.query.trim(),
+        attachments: formData.attachments || []
       } : r));
 
       setIsModalOpen(false);
       setSuccessToast(`Request #${editingId} updated successfully.`);
     } else {
-      // Create new record with auto ID, date, status = "Pending", and auto-fetched user
+      // Create new record with auto ID, auto date, status = "Pending", and auto-fetched user & phone
       const newId = `RFC-${String(requests.length + 101).padStart(3, '0')}`;
 
       const newRequest = {
@@ -127,7 +172,7 @@ export default function ReqForCallDashboard({
         contactNumber: CURRENT_USER.phone,
         userRole: CURRENT_USER.role,
         query: formData.query.trim(),
-        date: formData.date || new Date().toISOString().split('T')[0],
+        attachments: formData.attachments || [],
         status: 'Pending',
         createdAt: formattedDate
       };
@@ -156,11 +201,11 @@ export default function ReqForCallDashboard({
   const filteredRequests = requests.filter(req => {
     const matchesStatus = statusFilter === 'All' || req.status === statusFilter;
     const matchesSearch = 
-      req.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.contactNumber.includes(searchTerm) ||
-      req.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.query.toLowerCase().includes(searchTerm.toLowerCase());
+      (req.customerName && req.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.contactName && req.contactName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.contactNumber && req.contactNumber.includes(searchTerm)) ||
+      (req.id && req.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.query && req.query.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesStatus && matchesSearch;
   });
 
@@ -220,7 +265,7 @@ export default function ReqForCallDashboard({
             <Search size={15} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Search request, customer, phone..."
+              placeholder="Search request, user, phone..."
               className="form-control search-box"
               style={{ paddingLeft: '2.4rem', borderRadius: '999px', fontSize: '0.82rem' }}
               value={searchTerm}
@@ -255,7 +300,8 @@ export default function ReqForCallDashboard({
             <tr>
               <th style={{ width: '85px', padding: '0.75rem 1rem' }}>Req ID</th>
               <th style={{ minWidth: '170px', padding: '0.75rem 1rem' }}>Requested By</th>
-              <th style={{ minWidth: '220px', maxWidth: '340px', padding: '0.75rem 1rem' }}>Query</th>
+              <th style={{ minWidth: '220px', maxWidth: '320px', padding: '0.75rem 1rem' }}>Query</th>
+              <th style={{ width: '130px', padding: '0.75rem 1rem' }}>Attachments</th>
               <th style={{ width: '140px', padding: '0.75rem 1rem' }}>Status & Date</th>
               <th style={{ textAlign: 'right', width: '140px', padding: '0.75rem 1rem' }}>Actions</th>
             </tr>
@@ -263,7 +309,7 @@ export default function ReqForCallDashboard({
           <tbody>
             {filteredRequests.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                   <PhoneCall size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.4 }} />
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', fontSize: '0.9rem' }}>No Call Requests Found</div>
                   <div style={{ fontSize: '0.8rem' }}>Click "Request a Call" above to submit a new callback inquiry.</div>
@@ -277,16 +323,22 @@ export default function ReqForCallDashboard({
                     #{req.id}
                   </td>
 
-                  {/* Requested By */}
+                  {/* Requested By (Name + Auto-fetched Phone) */}
                   <td style={{ padding: '0.75rem 1rem' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.86rem' }}>
                       <User size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                       <span>{req.contactName || req.customerName || CURRENT_USER.name}</span>
                     </div>
+                    {(req.contactNumber || CURRENT_USER.phone) && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.2rem' }}>
+                        <Phone size={11} style={{ opacity: 0.7 }} />
+                        <span>{req.contactNumber || CURRENT_USER.phone}</span>
+                      </div>
+                    )}
                   </td>
 
                   {/* Query */}
-                  <td style={{ maxWidth: '340px', padding: '0.75rem 1rem' }}>
+                  <td style={{ maxWidth: '320px', padding: '0.75rem 1rem' }}>
                     <div 
                       style={{ 
                         fontSize: '0.82rem', 
@@ -300,6 +352,32 @@ export default function ReqForCallDashboard({
                     >
                       {req.query}
                     </div>
+                  </td>
+
+                  {/* Attachments Column */}
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    {req.attachments && req.attachments.length > 0 ? (
+                      <button 
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '0.35rem', 
+                          padding: '0.25rem 0.55rem', 
+                          fontSize: '0.75rem', 
+                          borderRadius: '4px',
+                          background: 'var(--bg-surface-alt)'
+                        }}
+                        onClick={() => setSelectedViewAttachments(req)}
+                        title="View attachments"
+                      >
+                        <Paperclip size={12} color="var(--accent-color)" />
+                        <span>{req.attachments.length} {req.attachments.length === 1 ? 'file' : 'files'}</span>
+                      </button>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>
+                    )}
                   </td>
 
                   {/* Status & Date */}
@@ -320,7 +398,7 @@ export default function ReqForCallDashboard({
                     </div>
                   </td>
 
-                  {/* Clean Actions: Edit & Status Toggle (No Call Button) */}
+                  {/* Actions: Edit & Status Toggle (No Call Button) */}
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '0.75rem 1rem' }}>
                     <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                       {/* Edit Button */}
@@ -365,10 +443,10 @@ export default function ReqForCallDashboard({
         </table>
       </div>
 
-      {/* REQUEST A CALL / EDIT MODAL (Only Date & Query with Auto-fetched User) */}
+      {/* REQUEST A CALL / EDIT MODAL */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)} style={{ zIndex: 1200 }}>
-          <div className="modal-content" style={{ maxWidth: '460px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">
                 {editingId ? `Edit Request #${editingId}` : 'Request a Call'}
@@ -377,36 +455,54 @@ export default function ReqForCallDashboard({
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.25rem' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', padding: '1.25rem' }}>
                 
-                {/* Auto-fetched user profile banner */}
-                <div style={{ background: 'var(--bg-surface-alt)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--accent-color)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
-                    {CURRENT_USER.avatar}
+                {/* Requester Info Card (Clean - no "auto-fetched" text) */}
+                <div style={{ 
+                  background: 'var(--bg-surface-alt)', 
+                  padding: '0.75rem 1rem', 
+                  borderRadius: 'var(--radius-sm)', 
+                  border: '1px solid var(--border-color)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  gap: '0.75rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{ 
+                      width: '34px', 
+                      height: '34px', 
+                      borderRadius: '50%', 
+                      background: 'var(--accent-color)', 
+                      color: '#FFFFFF', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      fontWeight: 700, 
+                      fontSize: '0.8rem', 
+                      flexShrink: 0 
+                    }}>
+                      {CURRENT_USER.avatar}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {CURRENT_USER.name} <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>({CURRENT_USER.role})</span>
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.15rem' }}>
+                        <Phone size={11} style={{ color: 'var(--accent-color)' }} />
+                        <span>{CURRENT_USER.phone}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Auto-fetched User Profile</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {CURRENT_USER.name} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({CURRENT_USER.role})</span>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Date</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
                   </div>
                 </div>
 
-                {/* 1. Date */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Date <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    className="form-control"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
-                </div>
-
-                {/* 2. Query */}
+                {/* 1. Query Field */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>
                     Describe the Query / Issue <span style={{ color: '#EF4444' }}>*</span>
@@ -421,6 +517,65 @@ export default function ReqForCallDashboard({
                   />
                 </div>
 
+                {/* 2. Attachments Section */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                      Attachments
+                    </label>
+                    <label 
+                      className="btn btn-secondary btn-small"
+                      style={{ cursor: 'pointer', margin: 0, padding: '0.25rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <Paperclip size={12} /> Add Files / Photos
+                      <input 
+                        type="file" 
+                        multiple 
+                        accept="image/*,.pdf,.doc,.docx"
+                        style={{ display: 'none' }}
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+                  </div>
+
+                  {formData.attachments && formData.attachments.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      {formData.attachments.map((file, idx) => (
+                        <div 
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            background: 'var(--bg-surface-alt)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '0.3rem 0.55rem',
+                            fontSize: '0.76rem'
+                          }}
+                        >
+                          {file.type === 'IMAGE' && file.dataUrl ? (
+                            <img src={file.dataUrl} alt={file.name} style={{ width: '20px', height: '20px', borderRadius: '3px', objectFit: 'cover' }} />
+                          ) : (
+                            <Paperclip size={12} color="var(--accent-color)" />
+                          )}
+                          <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                            {file.name}
+                          </span>
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveAttachment(idx)}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center' }}
+                            title="Remove"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
               </div>
 
               <div className="modal-footer">
@@ -432,6 +587,78 @@ export default function ReqForCallDashboard({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW ATTACHMENTS MODAL */}
+      {selectedViewAttachments && (
+        <div className="modal-overlay" onClick={() => setSelectedViewAttachments(null)} style={{ zIndex: 1300 }}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Paperclip size={16} color="var(--accent-color)" />
+                <span>Attachments (#{selectedViewAttachments.id})</span>
+              </h2>
+              <button className="close-btn" onClick={() => setSelectedViewAttachments(null)}><X size={20} /></button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {selectedViewAttachments.attachments?.map((att, i) => (
+                  <div 
+                    key={i} 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.6rem 0.8rem',
+                      background: 'var(--bg-surface-alt)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-color)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', overflow: 'hidden' }}>
+                      {att.type === 'IMAGE' ? (
+                        att.dataUrl ? (
+                          <img src={att.dataUrl} alt={att.name} style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
+                        ) : (
+                          <ImageIcon size={18} color="var(--accent-color)" />
+                        )
+                      ) : (
+                        <FileText size={18} color="var(--accent-color)" />
+                      )}
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {att.name}
+                        </div>
+                        {att.size && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{att.size}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {att.dataUrl && (
+                      <a 
+                        href={att.dataUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="btn btn-secondary btn-small"
+                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', textDecoration: 'none' }}
+                      >
+                        <ExternalLink size={11} /> View
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedViewAttachments(null)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
