@@ -44,6 +44,13 @@ export const initialCallRequests = [
   }
 ];
 
+const CURRENT_USER = {
+  name: 'John Doe',
+  role: 'Sales Executive',
+  phone: '+91 98451 22340',
+  avatar: 'JD'
+};
+
 export default function ReqForCallDashboard({ 
   enquiries = [], 
   requests: propRequests, 
@@ -59,68 +66,20 @@ export default function ReqForCallDashboard({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
-  const [phoneError, setPhoneError] = useState('');
 
-  // Form State: strictly the 4 fields
+  // Form State: only Date and Query
   const [formData, setFormData] = useState({
-    customerName: '',
-    contactName: '',
-    contactNumber: '',
+    date: new Date().toISOString().split('T')[0],
     query: ''
   });
-
-  // Compile list of available customers/dealers from DMS records
-  const defaultDmsCustomers = [
-    { name: 'TechCorp Solutions', contactPerson: 'Sarah Jenkins', phone: '+1 (555) 123-4567' },
-    { name: 'Global Industries', contactPerson: 'Mike Ross', phone: '+1 (555) 987-6543' },
-    { name: 'Sri Lakshmi Industries', contactPerson: 'Kishore Kumar', phone: '+91 98451 22340' },
-    { name: 'Apex Beverages Ltd', contactPerson: 'Ramesh Sharma', phone: '+91 97412 88901' },
-    { name: 'Greenfield Pharma Lab', contactPerson: 'Dr. Ananya Rao', phone: '+91 99002 45671' },
-    { name: 'Deccan Textiles Pvt Ltd', contactPerson: 'Venkatesh Murthy', phone: '+91 94481 67890' }
-  ];
-
-  // Merge with any enquiries dynamically passed from DMS
-  const combinedCustomersMap = new Map();
-  defaultDmsCustomers.forEach(c => combinedCustomersMap.set(c.name, c));
-  if (enquiries && enquiries.length > 0) {
-    enquiries.forEach(e => {
-      if (e.customerName) {
-        combinedCustomersMap.set(e.customerName, {
-          name: e.customerName,
-          contactPerson: e.contactPerson || '',
-          phone: e.phone || ''
-        });
-      }
-    });
-  }
-  const dmsCustomerList = Array.from(combinedCustomersMap.values());
-
-  // Handle Customer Selection: Auto-populate contact name and phone from record
-  const handleCustomerSelect = (customerName) => {
-    const found = dmsCustomerList.find(c => c.name === customerName);
-    if (found) {
-      setFormData(prev => ({
-        ...prev,
-        customerName: found.name,
-        contactName: found.contactPerson || prev.contactName,
-        contactNumber: found.phone || prev.contactNumber
-      }));
-      setPhoneError('');
-    } else {
-      setFormData(prev => ({ ...prev, customerName }));
-    }
-  };
 
   // Open Create Modal
   const handleOpenCreate = () => {
     setEditingId(null);
     setFormData({
-      customerName: '',
-      contactName: '',
-      contactNumber: '',
+      date: new Date().toISOString().split('T')[0],
       query: ''
     });
-    setPhoneError('');
     setIsModalOpen(true);
   };
 
@@ -128,58 +87,47 @@ export default function ReqForCallDashboard({
   const handleOpenEdit = (req) => {
     setEditingId(req.id);
     setFormData({
-      customerName: req.customerName,
-      contactName: req.contactName,
-      contactNumber: req.contactNumber,
-      query: req.query
+      date: req.date || new Date().toISOString().split('T')[0],
+      query: req.query || ''
     });
-    setPhoneError('');
     setIsModalOpen(true);
-  };
-
-  // Phone Validation (min 10 digits)
-  const validatePhoneNumber = (phone) => {
-    const digitsOnly = phone.replace(/[^0-9]/g, '');
-    return digitsOnly.length >= 10;
   };
 
   // Submit Handler (Create or Edit)
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!formData.customerName) return;
+    if (!formData.query.trim()) return;
 
-    if (!validatePhoneNumber(formData.contactNumber)) {
-      setPhoneError('Please enter a valid phone number (min 10 digits).');
-      return;
-    }
-    setPhoneError('');
+    const formattedDate = new Date(formData.date || new Date()).toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
 
     if (editingId) {
       // Update existing record
       setRequests(requests.map(r => r.id === editingId ? {
         ...r,
-        customerName: formData.customerName,
-        contactName: formData.contactName,
-        contactNumber: formData.contactNumber,
-        query: formData.query
+        date: formData.date,
+        createdAt: formattedDate,
+        query: formData.query.trim()
       } : r));
 
       setIsModalOpen(false);
       setSuccessToast(`Request #${editingId} updated successfully.`);
     } else {
-      // Create new record with auto ID, date, and status = "Pending"
+      // Create new record with auto ID, date, status = "Pending", and auto-fetched user
       const newId = `RFC-${String(requests.length + 101).padStart(3, '0')}`;
-      const now = new Date();
-      const formattedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + 
-        ', ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
       const newRequest = {
         id: newId,
-        customerName: formData.customerName,
-        contactName: formData.contactName,
-        contactNumber: formData.contactNumber,
-        query: formData.query,
+        customerName: CURRENT_USER.name,
+        contactName: CURRENT_USER.name,
+        contactNumber: CURRENT_USER.phone,
+        userRole: CURRENT_USER.role,
+        query: formData.query.trim(),
+        date: formData.date || new Date().toISOString().split('T')[0],
         status: 'Pending',
         createdAt: formattedDate
       };
@@ -306,10 +254,10 @@ export default function ReqForCallDashboard({
           <thead>
             <tr>
               <th style={{ width: '85px', padding: '0.75rem 1rem' }}>Req ID</th>
-              <th style={{ minWidth: '180px', padding: '0.75rem 1rem' }}>Customer & Contact</th>
-              <th style={{ minWidth: '220px', maxWidth: '320px', padding: '0.75rem 1rem' }}>Query</th>
+              <th style={{ minWidth: '170px', padding: '0.75rem 1rem' }}>Requested By</th>
+              <th style={{ minWidth: '220px', maxWidth: '340px', padding: '0.75rem 1rem' }}>Query</th>
               <th style={{ width: '140px', padding: '0.75rem 1rem' }}>Status & Date</th>
-              <th style={{ textAlign: 'right', width: '180px', padding: '0.75rem 1rem' }}>Actions</th>
+              <th style={{ textAlign: 'right', width: '140px', padding: '0.75rem 1rem' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -329,27 +277,16 @@ export default function ReqForCallDashboard({
                     #{req.id}
                   </td>
 
-                  {/* Customer & Contact */}
+                  {/* Requested By */}
                   <td style={{ padding: '0.75rem 1rem' }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}>
-                      <Building2 size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                      <span>{req.customerName}</span>
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <span>{req.contactName}</span>
-                      <span>•</span>
-                      <a 
-                        href={`tel:${req.contactNumber.replace(/[^0-9+]/g, '')}`} 
-                        style={{ color: 'var(--accent-color)', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                        title="Click to dial"
-                      >
-                        <Phone size={11} /> {req.contactNumber}
-                      </a>
+                      <User size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      <span>{req.contactName || req.customerName || CURRENT_USER.name}</span>
                     </div>
                   </td>
 
                   {/* Query */}
-                  <td style={{ maxWidth: '320px', padding: '0.75rem 1rem' }}>
+                  <td style={{ maxWidth: '340px', padding: '0.75rem 1rem' }}>
                     <div 
                       style={{ 
                         fontSize: '0.82rem', 
@@ -383,19 +320,9 @@ export default function ReqForCallDashboard({
                     </div>
                   </td>
 
-                  {/* Clean Actions: Call, Edit & Status Toggle */}
+                  {/* Clean Actions: Edit & Status Toggle (No Call Button) */}
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '0.75rem 1rem' }}>
                     <div style={{ display: 'inline-flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                      {/* Direct Call Button */}
-                      <a 
-                        href={`tel:${req.contactNumber.replace(/[^0-9+]/g, '')}`} 
-                        className="btn btn-primary btn-small"
-                        style={{ textDecoration: 'none', background: '#3B82F6', border: 'none', color: '#FFFFFF', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                        title={`Call ${req.contactName} (${req.contactNumber})`}
-                      >
-                        <Phone size={12} /> Call
-                      </a>
-
                       {/* Edit Button */}
                       <button 
                         type="button"
@@ -438,10 +365,10 @@ export default function ReqForCallDashboard({
         </table>
       </div>
 
-      {/* REQUEST A CALL / EDIT MODAL (Clean 4 fields only, no clutter) */}
+      {/* REQUEST A CALL / EDIT MODAL (Only Date & Query with Auto-fetched User) */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)} style={{ zIndex: 1200 }}>
-          <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '460px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">
                 {editingId ? `Edit Request #${editingId}` : 'Request a Call'}
@@ -450,76 +377,45 @@ export default function ReqForCallDashboard({
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.25rem' }}>
                 
-                {/* 1. Customer / Dealer Dropdown */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Customer / Dealer *
-                  </label>
-                  <select
-                    required
-                    className="form-control"
-                    value={formData.customerName}
-                    onChange={(e) => handleCustomerSelect(e.target.value)}
-                  >
-                    <option value="">-- Select Customer / Dealer --</option>
-                    {dmsCustomerList.map(cust => (
-                      <option key={cust.name} value={cust.name}>
-                        {cust.name} {cust.contactPerson ? `(${cust.contactPerson})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 2. Contact Name */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Contact Name *
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    className="form-control"
-                    placeholder="Name of contact person"
-                    value={formData.contactName}
-                    onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  />
-                </div>
-
-                {/* 3. Contact Number */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>
-                    Contact Number *
-                  </label>
-                  <input
-                    required
-                    type="tel"
-                    className="form-control"
-                    placeholder="Callback phone number"
-                    value={formData.contactNumber}
-                    onChange={(e) => {
-                      setFormData({ ...formData, contactNumber: e.target.value });
-                      if (phoneError) setPhoneError('');
-                    }}
-                  />
-                  {phoneError && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem', fontWeight: 600 }}>
-                      {phoneError}
+                {/* Auto-fetched user profile banner */}
+                <div style={{ background: 'var(--bg-surface-alt)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--accent-color)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
+                    {CURRENT_USER.avatar}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Auto-fetched User Profile</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {CURRENT_USER.name} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({CURRENT_USER.role})</span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* 4. Query */}
+                {/* 1. Date */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>
-                    Query *
+                    Date <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    required
+                    type="date"
+                    className="form-control"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </div>
+
+                {/* 2. Query */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    Describe the Query / Issue <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <textarea
                     required
                     className="form-control"
                     rows={4}
-                    placeholder="Describe reason for callback..."
+                    placeholder="Enter what you need technical assistance with..."
                     value={formData.query}
                     onChange={(e) => setFormData({ ...formData, query: e.target.value })}
                   />
@@ -532,7 +428,7 @@ export default function ReqForCallDashboard({
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Save Changes' : 'Submit'}
+                  {editingId ? 'Save Changes' : 'Submit Request'}
                 </button>
               </div>
             </form>
