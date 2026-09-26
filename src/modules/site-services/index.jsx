@@ -597,23 +597,69 @@ function ScheduledServicesTab({ sites, updateSiteData, onSwitchToReports }) {
 
 
 function WaterReportsTab({ sites, addReport }) {
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
+  const getMinDateStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 3);
+    return d.toISOString().split('T')[0];
+  };
+
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [formSiteId, setFormSiteId] = useState('');
-  const [newReport, setNewReport] = useState({ date: '', ph: '', tds: '', hardness: '', attachment: '' });
+  const [previewReport, setPreviewReport] = useState(null);
+  const [newReport, setNewReport] = useState({ 
+    date: getTodayStr(), 
+    reportName: '', 
+    attachment: '', 
+    attachmentUrl: '',
+    isImage: false 
+  });
 
   const displaySites = selectedSiteId ? sites.filter(s => s.id.toString() === selectedSiteId) : sites;
   const reports = displaySites.flatMap(s => (s.siteData?.waterReports || []).map(r => ({ ...r, siteName: s.customerName, ocNumber: s.ocNumber })));
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const isImg = file.type.startsWith('image/');
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setNewReport(prev => ({
+        ...prev,
+        attachment: file.name,
+        attachmentUrl: ev.target.result,
+        isImage: isImg,
+        reportName: prev.reportName || file.name.replace(/\.[^/.]+$/, "")
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = (e) => {
     e.preventDefault();
     const targetSiteId = selectedSiteId || formSiteId;
     if (!targetSiteId) return alert('Please select a site first.');
+    if (!newReport.attachment) return alert('Please upload the water report file.');
     
-    addReport(parseInt(targetSiteId), 'waterReports', { id: Date.now(), ...newReport });
+    addReport(parseInt(targetSiteId), 'waterReports', { 
+      id: Date.now(), 
+      date: newReport.date || getTodayStr(),
+      reportName: newReport.reportName || newReport.attachment,
+      attachment: newReport.attachment,
+      attachmentUrl: newReport.attachmentUrl,
+      isImage: newReport.isImage
+    });
+
     setIsAdding(false);
     setFormSiteId('');
-    setNewReport({ date: '', ph: '', tds: '', hardness: '', attachment: '' });
+    setNewReport({ 
+      date: getTodayStr(), 
+      reportName: '', 
+      attachment: '', 
+      attachmentUrl: '',
+      isImage: false 
+    });
   };
 
   return (
@@ -623,14 +669,14 @@ function WaterReportsTab({ sites, addReport }) {
           <option value="">All Deployed Sites</option>
           {sites.map(s => <option key={s.id} value={s.id}>{s.customerName} ({s.ocNumber || 'No OC'})</option>)}
         </select>
-        <button className="btn btn-primary btn-small" onClick={() => setIsAdding(true)}>
+        <button className="btn btn-primary btn-small" onClick={() => { setIsAdding(true); setNewReport(prev => ({ ...prev, date: getTodayStr() })); }}>
           <Plus size={14} /> New Water Report
         </button>
       </div>
 
       {isAdding && (
-        <form onSubmit={handleSave} style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Enter Water Quality Parameters</h3>
+        <form onSubmit={handleSave} style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.5rem', maxWidth: '640px' }}>
+          <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 700 }}>Upload Water Report</h3>
           
           {!selectedSiteId && (
             <div style={{ marginBottom: '1rem' }}>
@@ -644,39 +690,62 @@ function WaterReportsTab({ sites, addReport }) {
             </div>
           )}
           
-          <div className="form-row" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label className="form-label" style={{ fontWeight: 600 }}>
-                Date Tested <span style={{ color: '#EF4444' }}>*</span>
+                Date <span style={{ color: '#EF4444' }}>*</span>
               </label>
-              <input required type="date" className="form-control" value={newReport.date} onChange={e => setNewReport({...newReport, date: e.target.value})} />
+              <input 
+                required 
+                type="date" 
+                className="form-control" 
+                min={getMinDateStr()} 
+                max={getTodayStr()} 
+                value={newReport.date} 
+                onChange={e => setNewReport({...newReport, date: e.target.value})} 
+              />
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                Defaults to today (allows up to 3 days back)
+              </div>
             </div>
+
             <div>
               <label className="form-label" style={{ fontWeight: 600 }}>
-                pH Level <span style={{ color: '#EF4444' }}>*</span>
+                Report Title / Remarks
               </label>
-              <input required type="text" className="form-control" placeholder="e.g. 7.2" value={newReport.ph} onChange={e => setNewReport({...newReport, ph: e.target.value})} />
-            </div>
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                TDS (ppm) <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input required type="text" className="form-control" placeholder="e.g. 150" value={newReport.tds} onChange={e => setNewReport({...newReport, tds: e.target.value})} />
-            </div>
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                Hardness <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input required type="text" className="form-control" placeholder="e.g. 50 ppm" value={newReport.hardness} onChange={e => setNewReport({...newReport, hardness: e.target.value})} />
-            </div>
-            <div style={{ gridColumn: 'span 2' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>Upload Report File (Optional)</label>
-              <input type="file" className="form-control" style={{ padding: '0.35rem' }} onChange={e => setNewReport({...newReport, attachment: e.target.files[0]?.name || ''})} />
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="e.g. Lab Water Test Analysis" 
+                value={newReport.reportName} 
+                onChange={e => setNewReport({...newReport, reportName: e.target.value})} 
+              />
             </div>
           </div>
+
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>
+              Upload Report File <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <input 
+              required 
+              type="file" 
+              className="form-control" 
+              style={{ padding: '0.35rem' }} 
+              accept=".pdf,image/*,.doc,.docx"
+              onChange={handleFileChange} 
+            />
+            {newReport.attachment && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.4rem', fontSize: '0.78rem', color: 'var(--accent-color)', fontWeight: 600 }}>
+                <FileText size={13} />
+                <span>{newReport.attachment}</span>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setIsAdding(false)}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Save Report</button>
+            <button type="submit" className="btn btn-primary">Save Water Report</button>
           </div>
         </form>
       )}
@@ -684,25 +753,102 @@ function WaterReportsTab({ sites, addReport }) {
       <div className="table-container">
         <table className="data-table">
           <thead>
-            <tr><th>Site</th><th>Date</th><th>pH Level</th><th>TDS</th><th>Hardness</th><th>Attachment</th></tr>
+            <tr>
+              <th style={{ minWidth: '180px' }}>Site</th>
+              <th style={{ width: '120px' }}>Date</th>
+              <th style={{ minWidth: '220px' }}>Report Document</th>
+              <th style={{ textAlign: 'right', width: '110px' }}>Action</th>
+            </tr>
           </thead>
           <tbody>
             {reports.length === 0 ? (
-              <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>No water reports found.</td></tr>
+              <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>No water reports found.</td></tr>
             ) : reports.map(r => (
               <tr key={r.id}>
                 <td>
                   <div style={{ fontWeight: 600 }}>{r.siteName}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.ocNumber}</div>
                 </td>
-                <td style={{ fontWeight: 600 }}>{r.date}</td>
-                <td>{r.ph}</td><td>{r.tds} ppm</td><td>{r.hardness}</td>
-                <td>{r.attachment ? <span style={{ color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 600 }}><FileText size={14}/> {r.attachment}</span> : '-'}</td>
+                <td style={{ fontWeight: 600, fontSize: '0.84rem', whiteSpace: 'nowrap' }}>{r.date}</td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <FileText size={16} color="var(--accent-color)" />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.84rem', color: 'var(--text-primary)' }}>
+                        {r.reportName || r.attachment || 'Water_Analysis_Report.pdf'}
+                      </div>
+                      {r.attachment && r.reportName && r.reportName !== r.attachment && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{r.attachment}</div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  {r.attachmentUrl ? (
+                    <a 
+                      href={r.attachmentUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="btn btn-secondary btn-small"
+                      style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                    >
+                      <ExternalLink size={12} /> View
+                    </a>
+                  ) : (
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary btn-small"
+                      style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem' }}
+                      onClick={() => setPreviewReport(r)}
+                    >
+                      <FileText size={12} /> View
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* PREVIEW REPORT MODAL */}
+      {previewReport && (
+        <div className="modal-overlay" onClick={() => setPreviewReport(null)} style={{ zIndex: 1300 }}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
+                <Droplet size={16} color="var(--accent-color)" />
+                <span>Water Report Details</span>
+              </h2>
+              <button className="close-btn" onClick={() => setPreviewReport(null)}><X size={20} /></button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '1.25rem' }}>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Site Name</div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{previewReport.siteName} ({previewReport.ocNumber})</div>
+              </div>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Date</div>
+                <div style={{ fontWeight: 600 }}>{previewReport.date}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Attachment</div>
+                <div style={{ fontWeight: 600, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
+                  <FileText size={15} />
+                  <span>{previewReport.reportName || previewReport.attachment || 'Water_Analysis_Report.pdf'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setPreviewReport(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
