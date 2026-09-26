@@ -714,7 +714,6 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
   const [newTicket, setNewTicket] = useState({ 
     complainerName: '', 
     contactNumber: '', 
-    date: new Date().toISOString().split('T')[0], 
     issue: '',
     attachments: []
   });
@@ -766,13 +765,14 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
 
     const targetSiteId = selectedSiteId || (sites[0]?.id ? sites[0].id : 1);
     const ticketId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const currentDate = new Date().toISOString().split('T')[0];
 
     addReport(parseInt(targetSiteId), 'complaints', { 
       id: ticketId, 
       status: 'OPEN', 
       complainerName: newTicket.complainerName.trim(),
       contactNumber: newTicket.contactNumber.trim(),
-      date: newTicket.date || new Date().toISOString().split('T')[0],
+      date: currentDate,
       issue: newTicket.issue.trim(),
       attachments: newTicket.attachments || []
     });
@@ -781,7 +781,6 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
     setNewTicket({ 
       complainerName: '', 
       contactNumber: '', 
-      date: new Date().toISOString().split('T')[0], 
       issue: '',
       attachments: []
     });
@@ -809,7 +808,7 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
         <form onSubmit={handleSave} style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.5rem', maxWidth: '680px' }}>
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 700 }}>Raise a Complaint / Ticket</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label className="form-label" style={{ fontWeight: 600 }}>
                 Complainer's Name <span style={{ color: '#EF4444' }}>*</span>
@@ -834,18 +833,6 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
                 placeholder="Enter contact number" 
                 value={newTicket.contactNumber} 
                 onChange={e => setNewTicket({...newTicket, contactNumber: e.target.value})} 
-              />
-            </div>
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>
-                Date <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input 
-                required 
-                type="date" 
-                className="form-control" 
-                value={newTicket.date} 
-                onChange={e => setNewTicket({...newTicket, date: e.target.value})} 
               />
             </div>
           </div>
