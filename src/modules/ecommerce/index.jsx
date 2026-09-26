@@ -19,6 +19,8 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const CATALOG = {
   'Pumps': [
@@ -99,7 +101,7 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries, activ
     setLocalActiveTab(tab);
     if (onTabChange) onTabChange(tab);
   };
-  const [expandedCategory, setExpandedCategory] = useState('Pumps');
+  const [expandedCategory, setExpandedCategory] = useState('');
   const [cart, setCart] = useState({}); // { itemId: quantity }
   const [selectedPoOrder, setSelectedPoOrder] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
@@ -209,117 +211,211 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries, activ
   };
 
   const handleDownloadPo = (order) => {
-    const poHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Purchase Order ${order.poNumber || order.id}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; background: #fff; }
-    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-    .title { font-size: 24px; font-weight: 800; color: #2563eb; margin: 0; }
-    .badge { background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 700; display: inline-block; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
-    .card h4 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    th { background: #f1f5f9; padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 2px solid #cbd5e1; font-weight: 700; }
-    td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-    .totals { margin-left: auto; width: 300px; }
-    .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-    .totals-total { border-top: 2px solid #2563eb; font-weight: 800; font-size: 17px; color: #2563eb; padding-top: 10px; margin-top: 6px; }
-    .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 20px; font-size: 12px; color: #64748b; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div>
-      <h1 class="title">PURCHASE ORDER</h1>
-      <div style="font-weight: 700; color: #334155; margin-top: 4px;">XPREDICT AUTOMATION SOLUTIONS PVT LTD</div>
-      <div style="font-size: 13px; color: #64748b;">Spare Parts & Equipment Catalog Division</div>
-    </div>
-    <div style="text-align: right;">
-      <div style="font-size: 20px; font-weight: 800; color: #0f172a;">${order.poNumber || `PO-2026-${order.id}`}</div>
-      <div style="font-size: 13px; color: #64748b; margin-top: 2px;">Order Ref: ${order.id}</div>
-      <div style="font-size: 13px; color: #64748b;">Date: ${order.date}</div>
-      <div style="margin-top: 8px;"><span class="badge">${order.status}</span></div>
-    </div>
-  </div>
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-  <div class="grid">
-    <div class="card">
-      <h4>Bill / Ship To (Site Customer)</h4>
-      <div style="font-weight: 700; font-size: 15px;">${order.siteName || order.customerDetails?.name || 'Customer Site'}</div>
-      <div style="font-size: 13px; color: #475569; margin-top: 4px;">Address: ${order.customerDetails?.address || 'Site Delivery Location'}</div>
-      <div style="font-size: 13px; color: #475569;">Contact: ${order.customerDetails?.phone || '+91 98451 22340'}</div>
-      <div style="font-size: 13px; color: #475569;">OC Reference: ${order.ocNumber || 'N/A'}</div>
-    </div>
-    <div class="card">
-      <h4>Supplier / Vendor</h4>
-      <div style="font-weight: 700; font-size: 15px;">XPREDICT AUTOMATION SOLUTIONS</div>
-      <div style="font-size: 13px; color: #475569; margin-top: 4px;">Industrial Water & Wastewater Treatment</div>
-      <div style="font-size: 13px; color: #475569;">Email: procurement@xpredict.com</div>
-      <div style="font-size: 13px; color: #475569;">Phone: +91 80 4123 4567</div>
-    </div>
-  </div>
+      const poNum = order.poNumber || `PO-2026-${order.id}`;
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 40px;">#</th>
-        <th>Item Description</th>
-        <th style="text-align: center; width: 80px;">Qty</th>
-        <th style="text-align: right; width: 120px;">Unit Price</th>
-        <th style="text-align: right; width: 120px;">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${order.items.map((item, idx) => `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>
-            <div style="font-weight: 600;">${item.name}</div>
-            ${item.specs ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">${item.specs.join(' • ')}</div>` : ''}
-          </td>
-          <td style="text-align: center;">${item.quantity}</td>
-          <td style="text-align: right;">$${Number(item.price).toFixed(2)}</td>
-          <td style="text-align: right; font-weight: 600;">$${(Number(item.price) * Number(item.quantity)).toFixed(2)}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
+      // Header Decorative Bar
+      doc.setFillColor(37, 99, 235);
+      doc.rect(0, 0, 210, 6, 'F');
 
-  <div class="totals">
-    <div class="totals-row">
-      <span>Subtotal:</span>
-      <span>$${(order.subtotal || order.total / 1.18 || order.total).toFixed(2)}</span>
-    </div>
-    <div class="totals-row">
-      <span>Taxes & GST (18%):</span>
-      <span>$${(order.tax || order.total * 0.18 / 1.18 || 0).toFixed(2)}</span>
-    </div>
-    <div class="totals-row totals-total">
-      <span>Grand Total:</span>
-      <span>$${Number(order.total).toFixed(2)}</span>
-    </div>
-  </div>
+      // Top Title & Company Info
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(37, 99, 235);
+      doc.text('PURCHASE ORDER', 14, 20);
 
-  <div class="footer">
-    <div>This is an official Purchase Order generated via XPREDICT Automated Procurement System.</div>
-    <div style="margin-top: 4px;">Generated on: ${new Date().toLocaleString()}</div>
-  </div>
-</body>
-</html>`;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('XPREDICT AUTOMATION SOLUTIONS PVT LTD', 14, 27);
 
-    const blob = new Blob([poHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Purchase_Order_${order.poNumber || order.id}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Industrial Water & Wastewater Treatment Equipment & Spares Division', 14, 32);
+      doc.text('Plot 48, Peenya Industrial Area, Phase II, Bengaluru - 560058', 14, 36.5);
+      doc.text('GSTIN: 29AAACX1234F1Z8 | Email: procurement@xpredict.com', 14, 41);
+
+      // Top Right PO Metadata Box
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(125, 12, 71, 32, 2, 2, 'F');
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(37, 99, 235);
+      doc.text(poNum, 192, 19, { align: 'right' });
+
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Order ID: ${order.id}`, 192, 25, { align: 'right' });
+      doc.text(`Date: ${order.date || new Date().toISOString().split('T')[0]}`, 192, 31, { align: 'right' });
+      
+      doc.setFont('helvetica', 'bold');
+      if (order.status === 'APPROVED') {
+        doc.setTextColor(22, 163, 74);
+      } else if (order.status === 'REJECTED') {
+        doc.setTextColor(220, 38, 38);
+      } else {
+        doc.setTextColor(217, 119, 6);
+      }
+      doc.text(`Status: ${order.status || 'PENDING'}`, 192, 37, { align: 'right' });
+
+      // Line separator
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(14, 46, 196, 46);
+
+      // Two Column Address Cards
+      // Left Box: Buyer / Ship To
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(14, 50, 88, 28, 2, 2, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, 50, 88, 28, 2, 2, 'S');
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('BUYER / SHIP TO (SITE CUSTOMER):', 18, 56);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(order.siteName || order.customerDetails?.name || 'Customer Site', 18, 61);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Address: ${order.customerDetails?.address || 'Site Delivery Location'}`, 18, 66);
+      doc.text(`Contact: ${order.customerDetails?.phone || '+91 98451 22340'}`, 18, 70.5);
+      doc.text(`OC Reference: ${order.ocNumber || 'N/A'}`, 18, 75);
+
+      // Right Box: Supplier / Vendor
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(108, 50, 88, 28, 2, 2, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(108, 50, 88, 28, 2, 2, 'S');
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('SUPPLIER / VENDOR:', 112, 56);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Xpredict Automation Solutions Pvt Ltd', 112, 61);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text('Central Spares & Logistics Depot, Bengaluru', 112, 66);
+      doc.text('Email: procurement@xpredict.com', 112, 70.5);
+      doc.text('Support Helpline: +91 80 4123 4567', 112, 75);
+
+      // Table of Items
+      const tableData = (order.items || []).map((item, idx) => [
+        idx + 1,
+        item.specs && item.specs.length > 0 ? `${item.name}\n${item.specs.join(' • ')}` : item.name,
+        item.quantity,
+        `$${Number(item.price).toFixed(2)}`,
+        `$${(Number(item.price) * Number(item.quantity)).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: 82,
+        head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Amount']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 8.5,
+          halign: 'left'
+        },
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 3.5,
+          textColor: [30, 41, 59],
+          valign: 'middle'
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 104 },
+          2: { cellWidth: 16, halign: 'center' },
+          3: { cellWidth: 26, halign: 'right' },
+          4: { cellWidth: 26, halign: 'right' }
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      const finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 140) + 8;
+      const subtotal = order.subtotal || order.total / 1.18 || order.total;
+      const tax = order.tax || order.total * 0.18 / 1.18 || 0;
+      const total = Number(order.total);
+
+      // Terms & Conditions on the left
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(71, 85, 105);
+      doc.text('Terms & Delivery Conditions:', 14, finalY);
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text('1. Delivery within 3-5 business days upon order placement.', 14, finalY + 4.5);
+      doc.text('2. All items covered by standard 1-year manufacturer replacement warranty.', 14, finalY + 9);
+      doc.text('3. Prices inclusive of transit handling and delivery to site.', 14, finalY + 13.5);
+      doc.text('4. Official inspection report and serial documentation attached upon shipment.', 14, finalY + 18);
+
+      // Totals Box on the right
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text('Subtotal:', 155, finalY, { align: 'right' });
+      doc.text(`$${Number(subtotal).toFixed(2)}`, 196, finalY, { align: 'right' });
+
+      doc.text('Tax (18% GST):', 155, finalY + 5.5, { align: 'right' });
+      doc.text(`$${Number(tax).toFixed(2)}`, 196, finalY + 5.5, { align: 'right' });
+
+      doc.setDrawColor(37, 99, 235);
+      doc.setLineWidth(0.5);
+      doc.line(135, finalY + 8.5, 196, finalY + 8.5);
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(37, 99, 235);
+      doc.text('Grand Total:', 155, finalY + 14.5, { align: 'right' });
+      doc.text(`$${Number(total).toFixed(2)}`, 196, finalY + 14.5, { align: 'right' });
+
+      // Authorized Signature line
+      const sigY = finalY + 28;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.line(140, sigY, 196, sigY);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Authorized Signatory / Procurement Dept', 196, sigY + 4, { align: 'right' });
+
+      // Footer
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text('This is an official Purchase Order document issued by XPREDICT Automation Solutions. No physical stamp required.', 105, 287, { align: 'center' });
+
+      // Save PDF file
+      doc.save(`Purchase_Order_${poNum}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   const cartItems = Object.entries(cart).map(([itemId, qty]) => {
@@ -664,9 +760,9 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries, activ
                           className="btn btn-secondary btn-small"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem', padding: '0.2rem 0.45rem' }}
                           onClick={() => handleDownloadPo(order)}
-                          title="Download Purchase Order Document"
+                          title="Download Purchase Order as PDF"
                         >
-                          <Download size={11} /> Download PO
+                          <Download size={11} /> Download PO (PDF)
                         </button>
                       </div>
                     </div>
@@ -728,7 +824,7 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries, activ
                   onClick={() => handleDownloadPo(selectedPoOrder)}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  <Download size={13} /> Download (.html)
+                  <Download size={13} /> Download PO (PDF)
                 </button>
                 <button 
                   type="button" 

@@ -83,11 +83,10 @@ function App() {
       ]
     },
     {
-      title: 'Purchase Module',
+      title: 'Ecommerce',
       icon: <ShoppingCart size={16} />,
       items: [
-        { id: 'ecom-store', label: 'Store Catalog' },
-        { id: 'ecom-orders', label: 'My Orders' }
+        { id: 'ecom-purchase', label: 'Purchase Module' }
       ]
     },
     {
@@ -169,10 +168,8 @@ function App() {
               setEnquiries={setEnquiries} 
             />
           )}
-          {(activeModule === 'ecom-purchase' || activeModule === 'ecom-store' || activeModule === 'ecom-orders') && (
+          {activeModule === 'ecom-purchase' && (
             <EcommerceDashboard 
-              activeTab={activeModule === 'ecom-orders' ? 'orders' : 'store'} 
-              onTabChange={(tab) => setActiveModule(tab === 'orders' ? 'ecom-orders' : 'ecom-store')} 
               enquiries={enquiries} 
               setEnquiries={setEnquiries} 
             />
@@ -186,7 +183,7 @@ function App() {
             <ToolsModule activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId)} />
           )}
 
-          {!activeModule.startsWith('crm-') && !activeModule.startsWith('site-') && activeModule !== 'site-services' && !activeModule.startsWith('ecom-') && !activeModule.startsWith('tech-') && !activeModule.startsWith('tools-') && (
+          {!activeModule.startsWith('crm-') && !activeModule.startsWith('site-') && activeModule !== 'site-services' && activeModule !== 'ecom-purchase' && !activeModule.startsWith('tech-') && !activeModule.startsWith('tools-') && (
             <div className="page-container">
               <h2 className="page-title">Module Under Construction</h2>
               <p style={{ color: 'var(--text-muted)' }}>This section is currently being built.</p>
