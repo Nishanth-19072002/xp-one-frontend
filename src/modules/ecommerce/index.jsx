@@ -91,9 +91,14 @@ const DEFAULT_ORDERS = [
   }
 ];
 
-export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
+export default function EcommerceDashboard({ enquiries = [], setEnquiries, activeTab: propActiveTab, onTabChange }) {
   const [selectedSiteId, setSelectedSiteId] = useState('');
-  const [activeTab, setActiveTab] = useState('store');
+  const [localActiveTab, setLocalActiveTab] = useState(propActiveTab || 'store');
+  const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
+  const setActiveTab = (tab) => {
+    setLocalActiveTab(tab);
+    if (onTabChange) onTabChange(tab);
+  };
   const [expandedCategory, setExpandedCategory] = useState('Pumps');
   const [cart, setCart] = useState({}); // { itemId: quantity }
   const [selectedPoOrder, setSelectedPoOrder] = useState(null);
@@ -432,7 +437,7 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
             fontWeight: activeTab === 'orders' ? 700 : 500, whiteSpace: 'nowrap'
           }}
         >
-          <List size={16} /> My Orders & POs ({orderHistory.length})
+          <List size={16} /> My Orders ({orderHistory.length})
         </button>
       </div>
 
@@ -556,20 +561,20 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
         </div>
       )}
 
-      {/* MY ORDERS & POs TAB */}
+      {/* MY ORDERS TAB */}
       {activeTab === 'orders' && (
         <div className="table-container">
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: '95px' }}>Order ID</th>
-                <th style={{ minWidth: '140px' }}>PO Number</th>
-                <th style={{ minWidth: '170px' }}>Site / Customer</th>
-                <th style={{ width: '105px' }}>Date</th>
-                <th style={{ minWidth: '220px' }}>Items Ordered</th>
-                <th style={{ width: '110px' }}>Total</th>
-                <th style={{ width: '100px' }}>Status</th>
-                <th style={{ textAlign: 'right', minWidth: '180px' }}>Purchase Order (PO)</th>
+                <th style={{ width: '90px' }}>Order ID</th>
+                <th style={{ minWidth: '150px' }}>Site / Customer</th>
+                <th style={{ width: '100px' }}>Date</th>
+                <th style={{ minWidth: '200px' }}>Items Ordered</th>
+                <th style={{ width: '95px' }}>Total</th>
+                <th style={{ width: '95px' }}>Status</th>
+                <th style={{ minWidth: '175px' }}>Purchase Order (PO)</th>
+                <th style={{ textAlign: 'right', width: '120px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -588,25 +593,6 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
                     {order.id}
                   </td>
 
-                  {/* PO Number */}
-                  <td>
-                    <div style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '0.35rem', 
-                      padding: '0.2rem 0.5rem', 
-                      borderRadius: '4px', 
-                      background: 'rgba(37, 99, 235, 0.08)', 
-                      color: 'var(--accent-color)', 
-                      fontWeight: 700,
-                      fontSize: '0.82rem',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <FileText size={12} />
-                      <span>{order.poNumber || `PO-2026-${order.id}`}</span>
-                    </div>
-                  </td>
-
                   {/* Site / Customer */}
                   <td>
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.86rem' }}>{order.siteName}</div>
@@ -619,14 +605,14 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
                   </td>
 
                   {/* Items Ordered */}
-                  <td style={{ maxWidth: '280px' }}>
+                  <td style={{ maxWidth: '260px' }}>
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                       {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
                     </div>
                   </td>
 
                   {/* Total */}
-                  <td style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                  <td style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                     ${Number(order.total).toFixed(2)}
                   </td>
 
@@ -645,40 +631,71 @@ export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
                     </span>
                   </td>
 
-                  {/* PO Actions: View PO & Download PO */}
+                  {/* Purchase Order (PO) Column */}
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <div style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '0.35rem', 
+                        padding: '0.15rem 0.45rem', 
+                        borderRadius: '4px', 
+                        background: 'rgba(37, 99, 235, 0.08)', 
+                        color: 'var(--accent-color)', 
+                        fontWeight: 700,
+                        fontSize: '0.78rem',
+                        width: 'fit-content'
+                      }}>
+                        <FileText size={11} />
+                        <span>{order.poNumber || `PO-2026-${order.id}`}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                        <button 
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem', padding: '0.2rem 0.45rem' }}
+                          onClick={() => setSelectedPoOrder(order)}
+                          title="View Purchase Order"
+                        >
+                          <Eye size={11} /> View PO
+                        </button>
+                        <button 
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem', padding: '0.2rem 0.45rem' }}
+                          onClick={() => handleDownloadPo(order)}
+                          title="Download Purchase Order Document"
+                        >
+                          <Download size={11} /> Download PO
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Action Column */}
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                      <button 
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.25rem 0.55rem' }}
-                        onClick={() => setSelectedPoOrder(order)}
-                        title="View Purchase Order"
-                      >
-                        <Eye size={12} /> View PO
-                      </button>
-
-                      <button 
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.25rem 0.55rem' }}
-                        onClick={() => handleDownloadPo(order)}
-                        title="Download Purchase Order Document"
-                      >
-                        <Download size={12} /> Download PO
-                      </button>
-
-                      {order.status === 'PENDING' && (
+                    {order.status === 'PENDING' ? (
+                      <div style={{ display: 'inline-flex', gap: '0.3rem', justifyContent: 'flex-end' }}>
                         <button 
                           className="btn btn-primary btn-small" 
                           style={{ background: '#16A34A', fontSize: '0.72rem', padding: '0.25rem 0.45rem' }} 
                           onClick={() => handleUpdateOrderStatus(order.siteId || (confirmedSites.find(s => s.customerName === order.siteName) || {}).id, order.id, 'APPROVED')}
                           title="Approve Order"
                         >
-                          <Check size={11} /> Approve
+                          Approve
                         </button>
-                      )}
-                    </div>
+                        <button 
+                          className="btn btn-primary btn-small" 
+                          style={{ background: '#DC2626', fontSize: '0.72rem', padding: '0.25rem 0.45rem' }} 
+                          onClick={() => handleUpdateOrderStatus(order.siteId || (confirmedSites.find(s => s.customerName === order.siteName) || {}).id, order.id, 'REJECTED')}
+                          title="Reject Order"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
+                    )}
                   </td>
                 </tr>
               ))}
