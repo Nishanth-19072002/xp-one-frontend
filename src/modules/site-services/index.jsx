@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, FileText, Droplet, AlertTriangle, Plus, Save, ChevronDown, CheckCircle } from 'lucide-react';
+import { Calendar, FileText, Droplet, AlertTriangle, Plus, Save, ChevronDown, CheckCircle, Paperclip, Phone, User, X, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import ServiceReportsTab from './ServiceReportsTab';
 
 export default function SiteServicesDashboard({ enquiries = [], setEnquiries, activeModule, onModuleChange }) {
@@ -710,11 +710,13 @@ function WaterReportsTab({ sites, addReport }) {
 function ComplaintBoxTab({ sites, addReport, updateReport }) {
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [formSiteId, setFormSiteId] = useState('');
+  const [selectedViewAttachments, setSelectedViewAttachments] = useState(null);
   const [newTicket, setNewTicket] = useState({ 
-    servicePersonName: '', 
+    complainerName: '', 
+    contactNumber: '', 
     date: new Date().toISOString().split('T')[0], 
-    issue: '' 
+    issue: '',
+    attachments: []
   });
 
   const displaySites = selectedSiteId ? sites.filter(s => s.id.toString() === selectedSiteId) : sites;
@@ -725,27 +727,63 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
     ocNumber: s.ocNumber 
   })));
 
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    files.forEach(file => {
+      const isImg = file.type.startsWith('image/');
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const newAttachment = {
+          name: file.name,
+          size: file.size ? `${(file.size / 1024).toFixed(0)} KB` : 'Unknown size',
+          type: isImg ? 'IMAGE' : 'FILE',
+          dataUrl: uploadEvent.target.result
+        };
+        setNewTicket(prev => ({
+          ...prev,
+          attachments: [...(prev.attachments || []), newAttachment]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const handleRemoveAttachment = (index) => {
+    setNewTicket(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
-    const targetSiteId = selectedSiteId || formSiteId;
-    if (!targetSiteId) return alert('Please select a site first.');
-    if (!newTicket.servicePersonName.trim()) return alert('Please enter service person name.');
-    
+    if (!newTicket.complainerName.trim()) return alert("Please enter complainer's name.");
+    if (!newTicket.contactNumber.trim()) return alert("Please enter contact number.");
+    if (!newTicket.issue.trim()) return alert("Please enter the issue details.");
+
+    const targetSiteId = selectedSiteId || (sites[0]?.id ? sites[0].id : 1);
     const ticketId = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+
     addReport(parseInt(targetSiteId), 'complaints', { 
       id: ticketId, 
       status: 'OPEN', 
-      servicePersonName: newTicket.servicePersonName.trim(),
-      personName: newTicket.servicePersonName.trim(),
+      complainerName: newTicket.complainerName.trim(),
+      contactNumber: newTicket.contactNumber.trim(),
       date: newTicket.date || new Date().toISOString().split('T')[0],
-      issue: newTicket.issue.trim()
+      issue: newTicket.issue.trim(),
+      attachments: newTicket.attachments || []
     });
+
     setIsAdding(false);
-    setFormSiteId('');
     setNewTicket({ 
-      servicePersonName: '', 
+      complainerName: '', 
+      contactNumber: '', 
       date: new Date().toISOString().split('T')[0], 
-      issue: '' 
+      issue: '',
+      attachments: []
     });
   };
 
@@ -768,31 +806,34 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
       </div>
 
       {isAdding && (
-        <form onSubmit={handleSave} style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+        <form onSubmit={handleSave} style={{ background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.5rem', maxWidth: '680px' }}>
           <h3 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 700 }}>Raise a Complaint / Ticket</h3>
-          
-          {!selectedSiteId && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>Select Site <span style={{ color: '#EF4444' }}>*</span></label>
-              <select required className="form-control" value={formSiteId} onChange={e => setFormSiteId(e.target.value)}>
-                <option value="">-- Choose a site --</option>
-                {sites.map(s => <option key={s.id} value={s.id}>{s.customerName} ({s.ocNumber || 'No OC'})</option>)}
-              </select>
-            </div>
-          )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label className="form-label" style={{ fontWeight: 600 }}>
-                Service Person Name <span style={{ color: '#EF4444' }}>*</span>
+                Complainer's Name <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input 
                 required 
                 type="text" 
                 className="form-control" 
-                placeholder="e.g. Rajesh Kumar (Service Person / Technician)" 
-                value={newTicket.servicePersonName} 
-                onChange={e => setNewTicket({...newTicket, servicePersonName: e.target.value})} 
+                placeholder="Enter complainer's name" 
+                value={newTicket.complainerName} 
+                onChange={e => setNewTicket({...newTicket, complainerName: e.target.value})} 
+              />
+            </div>
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>
+                Contact Number <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input 
+                required 
+                type="tel" 
+                className="form-control" 
+                placeholder="Enter contact number" 
+                value={newTicket.contactNumber} 
+                onChange={e => setNewTicket({...newTicket, contactNumber: e.target.value})} 
               />
             </div>
             <div>
@@ -807,6 +848,65 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
                 onChange={e => setNewTicket({...newTicket, date: e.target.value})} 
               />
             </div>
+          </div>
+
+          {/* Attachments Section */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+              <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>
+                Attachments
+              </label>
+              <label 
+                className="btn btn-secondary btn-small"
+                style={{ cursor: 'pointer', margin: 0, padding: '0.25rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Paperclip size={12} /> Add Photos / Files
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*,.pdf,.doc,.docx"
+                  style={{ display: 'none' }}
+                  onChange={handleFileUpload}
+                />
+              </label>
+            </div>
+
+            {newTicket.attachments && newTicket.attachments.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {newTicket.attachments.map((file, idx) => (
+                  <div 
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'var(--bg-surface-alt)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.3rem 0.55rem',
+                      fontSize: '0.76rem'
+                    }}
+                  >
+                    {file.type === 'IMAGE' && file.dataUrl ? (
+                      <img src={file.dataUrl} alt={file.name} style={{ width: '20px', height: '20px', borderRadius: '3px', objectFit: 'cover' }} />
+                    ) : (
+                      <Paperclip size={12} color="var(--accent-color)" />
+                    )}
+                    <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                      {file.name}
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveAttachment(idx)}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center' }}
+                      title="Remove"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ marginBottom: '1.25rem' }}>
@@ -834,30 +934,64 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Site</th>
-              <th>Ticket ID</th>
-              <th>Date</th>
-              <th>Service Person</th>
-              <th>Issue Description</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Action</th>
+              <th style={{ width: '90px' }}>Ticket ID</th>
+              <th style={{ minWidth: '150px' }}>Complainer</th>
+              <th style={{ width: '130px' }}>Contact</th>
+              <th style={{ width: '105px' }}>Date</th>
+              <th style={{ minWidth: '200px' }}>Issue Description</th>
+              <th style={{ width: '115px' }}>Attachments</th>
+              <th style={{ width: '95px' }}>Status</th>
+              <th style={{ textAlign: 'right', width: '105px' }}>Action</th>
             </tr>
           </thead>
           <tbody>
             {complaints.length === 0 ? (
-              <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>No complaints raised.</td></tr>
+              <tr><td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>No complaints raised.</td></tr>
             ) : complaints.map(c => (
               <tr key={c.id}>
+                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>#{c.id}</td>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{c.siteName}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.ocNumber}</div>
+                  <div style={{ fontWeight: 600, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <User size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <span>{c.complainerName || c.servicePersonName || c.personName || c.siteName || 'Customer'}</span>
+                  </div>
                 </td>
-                <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.id}</td>
-                <td>{c.date}</td>
                 <td>
-                  <div style={{ fontWeight: 600, color: '#1E293B' }}>{c.servicePersonName || c.personName || '—'}</div>
+                  {c.contactNumber ? (
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Phone size={11} style={{ opacity: 0.7 }} />
+                      <span>{c.contactNumber}</span>
+                    </div>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
+                  )}
                 </td>
-                <td style={{ maxWidth: '280px' }}>{c.issue}</td>
+                <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{c.date}</td>
+                <td style={{ maxWidth: '280px', fontSize: '0.83rem', color: 'var(--text-secondary)' }}>{c.issue}</td>
+                <td>
+                  {c.attachments && c.attachments.length > 0 ? (
+                    <button 
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '0.35rem', 
+                        padding: '0.2rem 0.5rem', 
+                        fontSize: '0.74rem', 
+                        borderRadius: '4px',
+                        background: 'var(--bg-surface-alt)'
+                      }}
+                      onClick={() => setSelectedViewAttachments(c)}
+                      title="View attachments"
+                    >
+                      <Paperclip size={12} color="var(--accent-color)" />
+                      <span>{c.attachments.length} {c.attachments.length === 1 ? 'file' : 'files'}</span>
+                    </button>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>
+                  )}
+                </td>
                 <td>
                   <span style={{ 
                     padding: '0.2rem 0.55rem', 
@@ -887,6 +1021,78 @@ function ComplaintBoxTab({ sites, addReport, updateReport }) {
           </tbody>
         </table>
       </div>
+
+      {/* VIEW ATTACHMENTS MODAL */}
+      {selectedViewAttachments && (
+        <div className="modal-overlay" onClick={() => setSelectedViewAttachments(null)} style={{ zIndex: 1300 }}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
+                <Paperclip size={16} color="var(--accent-color)" />
+                <span>Attachments (#{selectedViewAttachments.id})</span>
+              </h2>
+              <button className="close-btn" onClick={() => setSelectedViewAttachments(null)}><X size={20} /></button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {selectedViewAttachments.attachments?.map((att, i) => (
+                  <div 
+                    key={i} 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.6rem 0.8rem',
+                      background: 'var(--bg-surface-alt)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-color)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', overflow: 'hidden' }}>
+                      {att.type === 'IMAGE' ? (
+                        att.dataUrl ? (
+                          <img src={att.dataUrl} alt={att.name} style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover' }} />
+                        ) : (
+                          <ImageIcon size={18} color="var(--accent-color)" />
+                        )
+                      ) : (
+                        <FileText size={18} color="var(--accent-color)" />
+                      )}
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {att.name}
+                        </div>
+                        {att.size && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{att.size}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {att.dataUrl && (
+                      <a 
+                        href={att.dataUrl} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="btn btn-secondary btn-small"
+                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', textDecoration: 'none' }}
+                      >
+                        <ExternalLink size={11} /> View
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedViewAttachments(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
