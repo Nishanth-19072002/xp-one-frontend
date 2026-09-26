@@ -168,7 +168,7 @@ function App() {
               setEnquiries={setEnquiries} 
             />
           )}
-          {activeModule === 'ecom-purchase' && (
+          {activeModule.startsWith('ecom-') && (
             <EcommerceDashboard 
               enquiries={enquiries} 
               setEnquiries={setEnquiries} 
@@ -183,7 +183,7 @@ function App() {
             <ToolsModule activeTab={activeModule} onTabChange={(tabId) => setActiveModule(tabId)} />
           )}
 
-          {!activeModule.startsWith('crm-') && !activeModule.startsWith('site-') && activeModule !== 'site-services' && activeModule !== 'ecom-purchase' && !activeModule.startsWith('tech-') && !activeModule.startsWith('tools-') && (
+          {!activeModule.startsWith('crm-') && !activeModule.startsWith('site-') && activeModule !== 'site-services' && !activeModule.startsWith('ecom-') && !activeModule.startsWith('tech-') && !activeModule.startsWith('tools-') && (
             <div className="page-container">
               <h2 className="page-title">Module Under Construction</h2>
               <p style={{ color: 'var(--text-muted)' }}>This section is currently being built.</p>

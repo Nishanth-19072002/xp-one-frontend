@@ -93,14 +93,9 @@ const DEFAULT_ORDERS = [
   }
 ];
 
-export default function EcommerceDashboard({ enquiries = [], setEnquiries, activeTab: propActiveTab, onTabChange }) {
+export default function EcommerceDashboard({ enquiries = [], setEnquiries }) {
   const [selectedSiteId, setSelectedSiteId] = useState('');
-  const [localActiveTab, setLocalActiveTab] = useState(propActiveTab || 'store');
-  const activeTab = propActiveTab !== undefined ? propActiveTab : localActiveTab;
-  const setActiveTab = (tab) => {
-    setLocalActiveTab(tab);
-    if (onTabChange) onTabChange(tab);
-  };
+  const [activeTab, setActiveTab] = useState('store');
   const [expandedCategory, setExpandedCategory] = useState('');
   const [cart, setCart] = useState({}); // { itemId: quantity }
   const [selectedPoOrder, setSelectedPoOrder] = useState(null);
